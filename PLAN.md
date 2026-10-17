@@ -92,3 +92,28 @@ and new id.
   list; reopen → returns. Commit.
 
 Two working tools (Phases 1–3) is a complete deliverable; Phase 4 is a bonus.
+
+## Build notes — what changed during the build (2026-10-17)
+- **Layout:** the initial scaffold used a uv src-layout package; flattened to a single root
+  `server.py` (run `uv run server.py`) to match the guide's commands and configs.
+- **`create_task` due params:** started as a single `due` (ISO) param; a live test showed the
+  calling model passing Todoist's own field name `due_datetime`, which the single param rejected,
+  so the date was lost. Changed to **separate `due_date` + `due_datetime`** params matching the API.
+- **`set_task_status` errors:** a malformed id returns HTTP 400 (not 404); both are mapped to the
+  same "no task with that id" hint.
+- **API shape confirmed (live, read-only):** `GET /tasks` returns `{results, next_cursor}` (handled
+  by pagination); the `due` object exposes the value under `date` (no separate `datetime` key),
+  which `_format_due` already handles via fallback.
+
+## Audit summary (Part 10)
+- Network: HTTPS to `api.todoist.com/api/v1` only (list/create/close/reopen), sending the Bearer
+  token and the task fields above. (FastMCP separately pings pypi.org on startup — not our code.)
+- Filesystem: reads `.env`; writes no files (logs to stderr).
+- Writes to Todoist: `create_task` (create) and `set_task_status` (close/reopen) only — no delete,
+  no field edits, no project changes. Within all PLAN.md constraints.
+
+## Comparison with existing servers (Part 10)
+- Official `Doist/todoist-mcp` (TypeScript, broad toolset, also streamable HTTP) and community
+  `greirson/mcp-todoist` (~19 tools consolidated via an `action` param, includes delete).
+- Ours is Python/httpx, local stdio, **three narrow tools with no delete/edit** — a smaller,
+  auditable surface for personal use.
