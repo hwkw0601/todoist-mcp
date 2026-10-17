@@ -122,6 +122,80 @@ async def list_active_tasks() -> str:
     return f"{len(tasks)} active task(s):\n" + "\n".join(lines)
 
 
+@mcp.tool
+async def create_task(
+    content: str,
+    due: str | None = None,
+    labels: list[str] | None = None,
+) -> str:
+    """Create a new Todoist task.
+
+    Use when the user wants to add a to-do. Accepts a task name, an optional due
+    date/time, and optional labels (categories). `due` is an ISO string: a date
+    `YYYY-MM-DD` (all-day) or a date-time `YYYY-MM-DDTHH:MM:SS` (a specific
+    time), or omit it for no due date. A value with a time is treated as local
+    time in the account's timezone (Asia/Seoul). Returns a confirmation with the
+    new task's name, due, labels, and id. This writes to the live account — only
+    call it when the user actually wants a task created.
+    """
+    logger.info(
+        "create_task: creating task (has_due=%s, label_count=%d)",
+        due is not None,
+        len(labels or []),
+    )
+    token = os.environ.get(TOKEN_ENV)
+    if not token:
+        return (
+            f"{TOKEN_ENV} is not set. Copy .env.example to .env and add your "
+            "Todoist personal API token."
+        )
+
+    body: dict[str, object] = {"content": content}
+    if due:
+        # A value carrying a time -> due_datetime (floating local time, so
+        # Todoist applies the account timezone); a date-only value -> due_date.
+        if "T" in due:
+            body["due_datetime"] = due
+        else:
+            body["due_date"] = due
+    if labels:
+        body["labels"] = labels
+
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{API_BASE}/tasks", headers=headers, json=body
+            )
+            resp.raise_for_status()
+            task = resp.json()
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status == 401:
+            return "Authentication failed — check the Todoist API token in .env."
+        if status == 400:
+            return (
+                "Todoist rejected the task (400) — check the due format "
+                "(YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS) or the labels."
+            )
+        if status == 403:
+            return "Access forbidden by Todoist (403) — the token may lack access."
+        if status == 429:
+            return "Rate limited by Todoist (429) — try again shortly."
+        return f"Todoist returned an error (HTTP {status})."
+    except httpx.RequestError as exc:
+        return f"Could not reach Todoist: {type(exc).__name__}."
+
+    new_id = task.get("id", "?")
+    due_out = _format_due(task.get("due")) or "none"
+    labels_out = ", ".join(task.get("labels") or []) or "none"
+    logger.info("create_task: created task id=%s", new_id)
+    return (
+        f"Created task [{new_id}] {task.get('content', content)} | "
+        f"due: {due_out} | labels: {labels_out}"
+    )
+
+
 def main() -> None:
     """Entry point: run the server over stdio."""
     logger.info("Starting todoist server (stdio)")
