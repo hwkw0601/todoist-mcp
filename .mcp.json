@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "todoist": {
+      "type": "stdio",
+      "command": "/Users/hyowonkwon/.local/bin/uv",
+      "args": [
+        "--directory",
+        "/Users/hyowonkwon/Desktop/todoist-mcp",
+        "run",
+        "server.py"
+      ],
+      "env": {}
+    }
+  }
+}
