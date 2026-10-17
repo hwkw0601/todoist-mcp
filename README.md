@@ -11,7 +11,7 @@ using a personal API token. Local, single-user, stdio only.
 | Tool | What it does | Writes? |
 |------|--------------|---------|
 | `list_active_tasks` | List your current open tasks (id, name, due, labels) | Read-only |
-| `create_task` | Create a task with a name, an optional ISO due date/time (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SS`), and optional labels | Creates |
+| `create_task` | Create a task with a name, an optional `due_date` (`YYYY-MM-DD`) or `due_datetime` (`YYYY-MM-DDTHH:MM:SS`), and optional labels | Creates |
 | `set_task_status` | Mark a task complete, or reopen a completed one, by id | Changes status only |
 
 No deleting, no editing of other fields, no project changes — by design.

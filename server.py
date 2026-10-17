@@ -125,24 +125,31 @@ async def list_active_tasks() -> str:
 @mcp.tool
 async def create_task(
     content: str,
-    due: str | None = None,
+    due_date: str | None = None,
+    due_datetime: str | None = None,
     labels: list[str] | None = None,
 ) -> str:
     """Create a new Todoist task.
 
     Use when the user wants to add a to-do. Accepts a task name, an optional due
-    date/time, and optional labels (categories). `due` is an ISO string: a date
-    `YYYY-MM-DD` (all-day) or a date-time `YYYY-MM-DDTHH:MM:SS` (a specific
-    time), or omit it for no due date. A value with a time is treated as local
-    time in the account's timezone (Asia/Seoul). Returns a confirmation with the
-    new task's name, due, labels, and id. This writes to the live account — only
-    call it when the user actually wants a task created.
+    date OR due date-time, and optional labels (categories). For a task with a
+    specific time, pass `due_datetime` as `YYYY-MM-DDTHH:MM:SS` (e.g.
+    `2026-10-18T15:30:00`) — it is treated as local time in the account's
+    timezone (Asia/Seoul), so 15:30 means 3:30pm KST. For an all-day task, pass
+    `due_date` as `YYYY-MM-DD`. Pass at most one of the two; omit both for no due
+    date. Returns a confirmation with the new task's name, due, labels, and id.
+    This writes to the live account — only call it when the user actually wants a
+    task created.
     """
     logger.info(
-        "create_task: creating task (has_due=%s, label_count=%d)",
-        due is not None,
+        "create_task: creating task (due_date=%s, due_datetime=%s, label_count=%d)",
+        due_date is not None,
+        due_datetime is not None,
         len(labels or []),
     )
+    if due_date and due_datetime:
+        return "Pass either due_date or due_datetime, not both."
+
     token = os.environ.get(TOKEN_ENV)
     if not token:
         return (
@@ -151,13 +158,11 @@ async def create_task(
         )
 
     body: dict[str, object] = {"content": content}
-    if due:
-        # A value carrying a time -> due_datetime (floating local time, so
-        # Todoist applies the account timezone); a date-only value -> due_date.
-        if "T" in due:
-            body["due_datetime"] = due
-        else:
-            body["due_date"] = due
+    if due_datetime:
+        # Floating local time (no offset) so Todoist applies the account tz.
+        body["due_datetime"] = due_datetime
+    elif due_date:
+        body["due_date"] = due_date
     if labels:
         body["labels"] = labels
 

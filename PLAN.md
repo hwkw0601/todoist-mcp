@@ -8,8 +8,9 @@ weekly scheduler with Todoist; the scheduler↔Todoist sync itself is out of sco
 These resolve choices the original brief left open or recommended differently:
 - **HTTP client: `httpx`** (not the `todoist-api-python` SDK) — transparent, auditable calls,
   minimal deps, no SDK version-churn.
-- **`create_task` due = ISO string** (not natural-language `due_string`): `YYYY-MM-DD` → `due_date`;
-  `YYYY-MM-DDTHH:MM:SS` → `due_datetime`; `None` → no due.
+- **`create_task` due = two separate params** `due_date` (`YYYY-MM-DD`) and `due_datetime`
+  (`YYYY-MM-DDTHH:MM:SS`), mirroring the Todoist API field names. (Revised after a live test showed
+  the model reaching for `due_datetime`; the earlier single-`due` param lost the date.)
 - **Flat layout:** a single `server.py` at the project root, run with `uv run server.py`.
 - **Names:** FastMCP instance and client registration key are both `todoist`.
 - **`set_task_status`** inputs: `task_id: str`, `done: bool`.
@@ -29,8 +30,9 @@ These resolve choices the original brief left open or recommended differently:
 open task with its **id**, name, due date/time (if any), and labels. The id is shown so Tool 3 can
 act on it.
 
-**Tool 2 — `create_task`** *(creates)* — inputs: `content: str` (required); `due: str | None`
-(ISO date or date-time, see decisions); `labels: list[str] | None` (my categories: Academics,
+**Tool 2 — `create_task`** *(creates)* — inputs: `content: str` (required); `due_date: str | None`
+(`YYYY-MM-DD`, all-day); `due_datetime: str | None` (`YYYY-MM-DDTHH:MM:SS`, specific local time —
+pass at most one of the two); `labels: list[str] | None` (my categories: Academics,
 Extracurricular, Application, RA, …). Returns text confirming the created task's name, due, labels,
 and new id.
 
