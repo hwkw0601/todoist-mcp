@@ -13,11 +13,11 @@ using a personal API token. Local, single-user, stdio only.
 | `list_active_tasks` | List your current open tasks (id, name, due, labels) | Read-only |
 | `create_task` | Create a task with a name, an optional `due_date` (`YYYY-MM-DD`) or `due_datetime` (`YYYY-MM-DDTHH:MM:SS`), and optional labels | Creates |
 | `set_task_status` | Mark a task complete, or reopen a completed one, by id | Changes status only |
+| `list_completed_tasks` | List tasks completed recently (last `days`, default 7), with ids for reopening | Read-only |
 
 No deleting, no editing of other fields, no project changes — by design.
 
-> **Status:** built in phases. `list_active_tasks` is implemented; `create_task` and
-> `set_task_status` are added next.
+> **Status:** all four tools implemented.
 
 ## Requirements
 

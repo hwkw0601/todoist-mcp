@@ -37,9 +37,9 @@ over HTTPS with a personal token via `httpx` (not the official SDK).
 ## Rules
 - **Never print to stdout.** stdout carries the MCP protocol; use `logging` to **stderr** only.
 - **Every tool** has a clear docstring and logs what it's doing with `logging.info()`.
-- **Write boundaries:** `list_active_tasks` is read-only. Only `create_task` (creates) and
-  `set_task_status` (changes a task's complete/incomplete status) change data. **Never add a tool
-  that deletes, bulk-edits, or changes projects/other fields.**
+- **Write boundaries:** `list_active_tasks` and `list_completed_tasks` are read-only. Only
+  `create_task` (creates) and `set_task_status` (changes a task's complete/incomplete status)
+  change data. **Never add a tool that deletes, bulk-edits, or changes projects/other fields.**
 - **Secrets:** the only secret is `TODOIST_API_TOKEN`, read from `.env`. `.env` is never committed;
   the token must never reach stdout, logs, or any returned/error message.
 - **Privacy:** task content enters Claude's context only when listed; don't log full task contents.

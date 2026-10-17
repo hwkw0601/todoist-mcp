@@ -65,7 +65,8 @@ and new id.
   SDK/FastMCP version coupling.
 
 ## Limitations
-- Open tasks only; no completed-history reporting.
+- `list_completed_tasks` covers a recent window only (default 7 days, max ~3 months per the
+  Todoist API); it is not full completed-history reporting.
 - No projects, sections, comments, reminders, recurring-rule editing, or deletion.
 - Timezone **Asia/Seoul (UTC+9)**: `due_datetime` is sent as floating local time so Todoist applies
   the account timezone — a 3:30pm task must land at 3:30pm KST (verified in testing).
@@ -92,6 +93,13 @@ and new id.
   list; reopen → returns. Commit.
 
 Two working tools (Phases 1–3) is a complete deliverable; Phase 4 is a bonus.
+
+## Added later — list_completed_tasks (2026-10-17)
+- New read-only tool `list_completed_tasks(days=7)` → `GET /api/v1/tasks/completed/by_completion_date`
+  with `since`/`until` RFC3339 timestamps (window capped at 92 days). Response is `{items:[...]}`
+  (verified live); items carry the task `id`, so a completed task can be reopened with
+  `set_task_status(done=false)` — including tasks checked off on the phone. Added so the button
+  app's 되돌리기 can list completed tasks rather than only ones completed within that app.
 
 ## Build notes — what changed during the build (2026-10-17)
 - **Layout:** the initial scaffold used a uv src-layout package; flattened to a single root

@@ -12,6 +12,7 @@ any message returned to the client.
 import logging
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from dotenv import load_dotenv
@@ -56,6 +57,20 @@ def _format_task(task: dict) -> str:
     due = _format_due(task.get("due"))
     if due:
         parts.append(f"due: {due}")
+    labels = task.get("labels") or []
+    if labels:
+        parts.append(f"labels: {', '.join(labels)}")
+    return " | ".join(parts)
+
+
+def _format_completed(task: dict) -> str:
+    """Render one completed task as a single plain-text line."""
+    task_id = task.get("id", "?")
+    name = task.get("content", "(no name)")
+    parts = [f"- [{task_id}] {name}"]
+    when = task.get("completed_at") or ""
+    if when:
+        parts.append(f"completed: {when}")
     labels = task.get("labels") or []
     if labels:
         parts.append(f"labels: {', '.join(labels)}")
@@ -249,6 +264,75 @@ async def set_task_status(task_id: str, done: bool) -> str:
     verb = "completed" if done else "reopened"
     logger.info("set_task_status: %s task id=%s", verb, task_id)
     return f"Task {task_id} {verb}."
+
+
+@mcp.tool
+async def list_completed_tasks(days: int = 7) -> str:
+    """List tasks I completed recently, within the last `days` days.
+
+    Use when the user wants to see finished tasks, or needs a completed task's id
+    in order to reopen it (with set_task_status, done=false) — including tasks
+    checked off elsewhere, like on the phone. Read-only. `days` defaults to 7 and
+    is capped at 92 (Todoist allows about a 3-month window). Returns one line per
+    completed task with its id, name, completion time, and labels.
+    """
+    days = max(1, min(int(days), 92))
+    logger.info("list_completed_tasks: fetching last %d day(s)", days)
+
+    token = os.environ.get(TOKEN_ENV)
+    if not token:
+        return (
+            f"{TOKEN_ENV} is not set. Copy .env.example to .env and add your "
+            "Todoist personal API token."
+        )
+
+    now = datetime.now(timezone.utc)
+    since = (now - timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    until = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    headers = {"Authorization": f"Bearer {token}"}
+    params: dict[str, str | int] = {"since": since, "until": until, "limit": 200}
+    tasks: list[dict] = []
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # The endpoint returns {"items": [...]} and may paginate via cursor.
+            while True:
+                resp = await client.get(
+                    f"{API_BASE}/tasks/completed/by_completion_date",
+                    headers=headers,
+                    params=params,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                if isinstance(data, list):
+                    tasks.extend(data)
+                    break
+                tasks.extend(data.get("items", data.get("results", [])))
+                cursor = data.get("next_cursor")
+                if not cursor:
+                    break
+                params["cursor"] = cursor
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status == 401:
+            return "Authentication failed — check the Todoist API token in .env."
+        if status == 403:
+            return "Access forbidden by Todoist (403) — the token may lack access."
+        if status == 429:
+            return "Rate limited by Todoist (429) — try again shortly."
+        return f"Todoist returned an error (HTTP {status})."
+    except httpx.RequestError as exc:
+        return f"Could not reach Todoist: {type(exc).__name__}."
+
+    logger.info("list_completed_tasks: %d task(s) returned", len(tasks))
+    if not tasks:
+        return f"No tasks completed in the last {days} day(s)."
+
+    lines = [_format_completed(t) for t in tasks]
+    return (
+        f"{len(tasks)} completed task(s) in the last {days} day(s):\n"
+        + "\n".join(lines)
+    )
 
 
 def main() -> None:
