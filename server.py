@@ -267,6 +267,81 @@ async def set_task_status(task_id: str, done: bool) -> str:
 
 
 @mcp.tool
+async def update_task(
+    task_id: str,
+    content: str | None = None,
+    due_date: str | None = None,
+    due_datetime: str | None = None,
+    clear_due: bool = False,
+    labels: list[str] | None = None,
+) -> str:
+    """Update an existing Todoist task's due date/time (and optionally its name or labels).
+
+    Use to reschedule a task — pass `due_datetime` (`YYYY-MM-DDTHH:MM:SS`, local
+    Asia/Seoul time) for a specific time, or `due_date` (`YYYY-MM-DD`) for an
+    all-day task — or pass `clear_due=true` to remove its due date entirely. Get
+    `task_id` from list_active_tasks or list_completed_tasks. Only changes the due
+    date/time, name, and labels — nothing else. This writes to the live account.
+    """
+    logger.info("update_task: id=%s clear_due=%s", task_id, clear_due)
+
+    token = os.environ.get(TOKEN_ENV)
+    if not token:
+        return (
+            f"{TOKEN_ENV} is not set. Copy .env.example to .env and add your "
+            "Todoist personal API token."
+        )
+
+    body: dict[str, object] = {}
+    if content is not None:
+        body["content"] = content
+    if clear_due:
+        body["due_string"] = "no date"  # Todoist clears the due for this value
+    elif due_datetime:
+        body["due_datetime"] = due_datetime
+    elif due_date:
+        body["due_date"] = due_date
+    if labels is not None:
+        body["labels"] = labels
+    if not body:
+        return "Nothing to update."
+
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{API_BASE}/tasks/{task_id}", headers=headers, json=body
+            )
+            resp.raise_for_status()
+            try:
+                task = resp.json()
+            except ValueError:
+                task = {}
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status == 401:
+            return "Authentication failed — check the Todoist API token in .env."
+        if status in (400, 404):
+            return (
+                f"No task with id {task_id} (or the update was invalid) — get the "
+                "id from list_active_tasks / list_completed_tasks."
+            )
+        if status == 403:
+            return "Access forbidden by Todoist (403) — the token may lack access."
+        if status == 429:
+            return "Rate limited by Todoist (429) — try again shortly."
+        return f"Todoist returned an error (HTTP {status})."
+    except httpx.RequestError as exc:
+        return f"Could not reach Todoist: {type(exc).__name__}."
+
+    due_out = _format_due(task.get("due")) if task else ""
+    tid = task.get("id", task_id) if task else task_id
+    name = task.get("content", "") if task else ""
+    logger.info("update_task: updated id=%s", tid)
+    return f"Updated task [{tid}] {name} | due: {due_out or ('none' if clear_due else 'unchanged')}"
+
+
+@mcp.tool
 async def list_completed_tasks(days: int = 7) -> str:
     """List tasks I completed recently, within the last `days` days.
 

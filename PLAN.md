@@ -94,6 +94,12 @@ and new id.
 
 Two working tools (Phases 1–3) is a complete deliverable; Phase 4 is a bonus.
 
+## Added later — update_task (2026-10-18)
+- New write tool `update_task(task_id, content?, due_date?, due_datetime?, clear_due?, labels?)` →
+  `POST /api/v1/tasks/{id}`. Changes a task's due date/time (or clears it via `due_string: "no date"`),
+  name, or labels — nothing else. Added so the scheduler app can reschedule or revert a task and have
+  it reflect in Todoist (the earlier "no update tool" limitation). Writes boundary in CLAUDE.md updated.
+
 ## Added later — list_completed_tasks (2026-10-17)
 - New read-only tool `list_completed_tasks(days=7)` → `GET /api/v1/tasks/completed/by_completion_date`
   with `since`/`until` RFC3339 timestamps (window capped at 92 days). Response is `{items:[...]}`
