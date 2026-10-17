@@ -201,6 +201,56 @@ async def create_task(
     )
 
 
+@mcp.tool
+async def set_task_status(task_id: str, done: bool) -> str:
+    """Mark a Todoist task complete, or reopen a completed one.
+
+    Use when the user says a task is done (`done=true`) or wants to undo
+    completing a task (`done=false`). Get the `task_id` from list_active_tasks.
+    Only changes a task's complete/incomplete status — it never edits, deletes,
+    or moves anything else. This writes to the live account.
+    """
+    action = "close" if done else "reopen"
+    logger.info("set_task_status: %s task id=%s", action, task_id)
+
+    token = os.environ.get(TOKEN_ENV)
+    if not token:
+        return (
+            f"{TOKEN_ENV} is not set. Copy .env.example to .env and add your "
+            "Todoist personal API token."
+        )
+
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # close/reopen return 204 No Content on success (no body to parse).
+            resp = await client.post(
+                f"{API_BASE}/tasks/{task_id}/{action}", headers=headers
+            )
+            resp.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status == 401:
+            return "Authentication failed — check the Todoist API token in .env."
+        if status in (400, 404):
+            return (
+                f"No task with id {task_id} — it may be already "
+                f"{'completed' if done else 'open'}, or the id is malformed or "
+                "wrong (get it from list_active_tasks)."
+            )
+        if status == 403:
+            return "Access forbidden by Todoist (403) — the token may lack access."
+        if status == 429:
+            return "Rate limited by Todoist (429) — try again shortly."
+        return f"Todoist returned an error (HTTP {status})."
+    except httpx.RequestError as exc:
+        return f"Could not reach Todoist: {type(exc).__name__}."
+
+    verb = "completed" if done else "reopened"
+    logger.info("set_task_status: %s task id=%s", verb, task_id)
+    return f"Task {task_id} {verb}."
+
+
 def main() -> None:
     """Entry point: run the server over stdio."""
     logger.info("Starting todoist server (stdio)")
