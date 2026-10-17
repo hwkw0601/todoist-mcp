@@ -94,6 +94,13 @@ and new id.
 
 Two working tools (Phases 1–3) is a complete deliverable; Phase 4 is a bonus.
 
+## Added later — delete_task (2026-10-18)
+- New write tool `delete_task(task_id)` → `DELETE /api/v1/tasks/{id}`. Permanently removes ONE task
+  by id (cannot be undone). Added at the user's explicit request so the scheduler's delete action
+  propagates to Todoist. Safeguards: single-id only (no bulk delete), the app requires a two-press
+  confirm, and the app's "reset all" never calls delete. Reverses the earlier "no delete tool"
+  security choice — recorded here deliberately.
+
 ## Added later — update_task (2026-10-18)
 - New write tool `update_task(task_id, content?, due_date?, due_datetime?, clear_due?, labels?)` →
   `POST /api/v1/tasks/{id}`. Changes a task's due date/time (or clears it via `due_string: "no date"`),

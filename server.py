@@ -410,6 +410,52 @@ async def list_completed_tasks(days: int = 7) -> str:
     )
 
 
+@mcp.tool
+async def delete_task(task_id: str) -> str:
+    """Permanently delete a Todoist task by id.
+
+    Use only when the user explicitly wants a task removed entirely (not just
+    completed — use set_task_status for that). Get `task_id` from
+    list_active_tasks or list_completed_tasks. This **cannot be undone** and
+    writes to the live account.
+    """
+    logger.info("delete_task: id=%s", task_id)
+
+    token = os.environ.get(TOKEN_ENV)
+    if not token:
+        return (
+            f"{TOKEN_ENV} is not set. Copy .env.example to .env and add your "
+            "Todoist personal API token."
+        )
+
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.delete(
+                f"{API_BASE}/tasks/{task_id}", headers=headers
+            )
+            resp.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        status = exc.response.status_code
+        if status == 401:
+            return "Authentication failed — check the Todoist API token in .env."
+        if status in (400, 404):
+            return (
+                f"No task with id {task_id} — it may already be deleted, or the "
+                "id is wrong (get it from list_active_tasks)."
+            )
+        if status == 403:
+            return "Access forbidden by Todoist (403) — the token may lack access."
+        if status == 429:
+            return "Rate limited by Todoist (429) — try again shortly."
+        return f"Todoist returned an error (HTTP {status})."
+    except httpx.RequestError as exc:
+        return f"Could not reach Todoist: {type(exc).__name__}."
+
+    logger.info("delete_task: deleted id=%s", task_id)
+    return f"Deleted task {task_id}."
+
+
 def main() -> None:
     """Entry point: run the server over stdio."""
     logger.info("Starting todoist server (stdio)")

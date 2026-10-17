@@ -15,8 +15,9 @@ using a personal API token. Local, single-user, stdio only.
 | `set_task_status` | Mark a task complete, or reopen a completed one, by id | Changes status only |
 | `update_task` | Change a task's due date/time (or clear it), name, or labels, by id | Edits due/name/labels |
 | `list_completed_tasks` | List tasks completed recently (last `days`, default 7), with ids for reopening | Read-only |
+| `delete_task` | Permanently delete one task by id (**cannot be undone**) | Deletes |
 
-No deleting, no editing of other fields, no project changes — by design.
+Single-task operations only — no bulk edits, no project/section changes.
 
 > **Status:** all four tools implemented.
 
