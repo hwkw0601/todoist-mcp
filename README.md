@@ -11,17 +11,17 @@ using a personal API token. Local, single-user, stdio only.
 | Tool | What it does | Writes? |
 |------|--------------|---------|
 | `list_active_tasks` | List your current open tasks (id, name, due, labels) | Read-only |
-| `create_task` | Create a task with a name, optional natural-language due ("tomorrow at 2pm"), and optional labels | Creates |
+| `create_task` | Create a task with a name, an optional ISO due date/time (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SS`), and optional labels | Creates |
 | `set_task_status` | Mark a task complete, or reopen a completed one, by id | Changes status only |
 
 No deleting, no editing of other fields, no project changes — by design.
 
-> **Status:** built in phases. Phase 1 is the scaffold (server runs, no tools yet); the tools
-> above are added in Phases 2–4.
+> **Status:** built in phases. `list_active_tasks` is implemented; `create_task` and
+> `set_task_status` are added next.
 
 ## Requirements
 
-- Python ≥ 3.13
+- Python ≥ 3.11
 - [uv](https://docs.astral.sh/uv/)
 - A Todoist **personal API token**: Todoist → Settings → Integrations → Developer → API token.
 
@@ -41,7 +41,7 @@ No deleting, no editing of other fields, no project changes — by design.
 ## Run
 
 ```bash
-uv run todoist-mcp
+uv run server.py
 ```
 
 The server communicates over stdio, so there is no visible output on success — it waits for an
@@ -58,7 +58,7 @@ client's PATH (find it with `which uv`).
   "mcpServers": {
     "todoist": {
       "command": "/Users/hyowonkwon/.local/bin/uv",
-      "args": ["--directory", "/Users/hyowonkwon/Desktop/todoist-mcp", "run", "todoist-mcp"]
+      "args": ["--directory", "/Users/hyowonkwon/Desktop/todoist-mcp", "run", "server.py"]
     }
   }
 }
@@ -66,7 +66,7 @@ client's PATH (find it with `which uv`).
 
 **Claude Code** — from the project directory:
 ```bash
-claude mcp add todoist -- /Users/hyowonkwon/.local/bin/uv --directory /Users/hyowonkwon/Desktop/todoist-mcp run todoist-mcp
+claude mcp add todoist -- /Users/hyowonkwon/.local/bin/uv --directory /Users/hyowonkwon/Desktop/todoist-mcp run server.py
 ```
 
 After registering, restart/reconnect the client and confirm the `todoist` server connects.

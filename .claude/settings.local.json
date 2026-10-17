@@ -9,7 +9,10 @@
       "Read(//usr/local/bin/**)",
       "Bash(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest)",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); a=[x for x in d['assets'] if x['name']=='gh_2.102.0_macOS_universal.pkg'][0]; print\\(a['name'], round\\(a['size']/1024/1024,1\\), 'MB'\\)\")",
-      "Bash(curl -fL -o ~/Downloads/gh_2.102.0_macOS_universal.pkg https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_macOS_universal.pkg)"
+      "Bash(curl -fL -o ~/Downloads/gh_2.102.0_macOS_universal.pkg https://github.com/cli/cli/releases/download/v2.102.0/gh_2.102.0_macOS_universal.pkg)",
+      "Bash(/Users/hyowonkwon/.local/bin/uv run python -c ' *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
