@@ -142,6 +142,7 @@ async def create_task(
     content: str,
     due_date: str | None = None,
     due_datetime: str | None = None,
+    due_string: str | None = None,
     labels: list[str] | None = None,
 ) -> str:
     """Create a new Todoist task.
@@ -151,10 +152,11 @@ async def create_task(
     specific time, pass `due_datetime` as `YYYY-MM-DDTHH:MM:SS` (e.g.
     `2026-10-18T15:30:00`) — it is treated as local time in the account's
     timezone (Asia/Seoul), so 15:30 means 3:30pm KST. For an all-day task, pass
-    `due_date` as `YYYY-MM-DD`. Pass at most one of the two; omit both for no due
-    date. Returns a confirmation with the new task's name, due, labels, and id.
-    This writes to the live account — only call it when the user actually wants a
-    task created.
+    `due_date` as `YYYY-MM-DD`. For a RECURRING task, pass `due_string` in natural
+    language (e.g. `every monday at 15:30`, `every day`). Pass at most one of the
+    three; omit all for no due date. Returns a confirmation with the new task's
+    name, due, labels, and id. This writes to the live account — only call it when
+    the user actually wants a task created.
     """
     logger.info(
         "create_task: creating task (due_date=%s, due_datetime=%s, label_count=%d)",
@@ -173,7 +175,9 @@ async def create_task(
         )
 
     body: dict[str, object] = {"content": content}
-    if due_datetime:
+    if due_string:
+        body["due_string"] = due_string  # natural language, incl. recurrence
+    elif due_datetime:
         # Floating local time (no offset) so Todoist applies the account tz.
         body["due_datetime"] = due_datetime
     elif due_date:
